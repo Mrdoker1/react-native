@@ -1,7 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import CameraIcon from './assets/scan';
 import {
-  NativeModules,
   GestureResponderEvent,
   SafeAreaView,
   ScrollView,
@@ -16,9 +15,11 @@ import {
   Alert,
   Dimensions
 } from 'react-native';
-import { CameraScreen } from 'react-native-camera-kit';
-
-const { TextRecognitionModule } = NativeModules;
+import TextRecognition from '@react-native-ml-kit/text-recognition';
+import RNFS from 'react-native-fs';
+import { CameraOptions, ImagePickerResponse } from 'react-native-image-picker';
+import {launchCamera} from 'react-native-image-picker';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 
 const openURL = (url: string) => {
   Linking.canOpenURL(url)
@@ -36,41 +37,104 @@ const App = () => {
   const [inputText, setInputText] = useState('');
   const [displayText, setDisplayText] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [capturedImage, setCapturedImage] = useState(null);
+  const [capturedImage, setCapturedImage] = useState('');
   const [recognizedText, setRecognizedText] = useState('');
 
-  const recognizeText = async (imageUri: string) => {
-    try {
-      const result = await TextRecognitionModule.recognizeImage(imageUri);
-      console.log('Text recognition result:', result);
-      setRecognizedText(result.blocks.map((block: { text: any; }) => block.text).join('\n'));
-    } catch (error) {
-      console.error('Error recognizing text:', error);
-      setRecognizedText('Ошибка распознавания текста');
+  // Функция распознавания текста из URL-адреса изображения
+  async function recognizeTextFromImage(imageURL:string) {
+    if (imageURL) {
+      try {
+        const result = await TextRecognition.recognize(imageURL);
+        console.log('Recognized text:', result.text);
+        processRecognizedText(result.text); // Обработка распознанного текста
+  
+        for (let block of result.blocks) {
+          // console.log('Block text:', block.text);
+          // console.log('Block frame:', block.frame);
+  
+          for (let line of block.lines) {
+            // console.log('Line text:', line.text);
+            // console.log('Line frame:', line.frame);
+          }
+        }
+        setRecognizedText(result.text);
+      } catch (error) {
+        console.error('Text recognition error:', error);
+      }
+    } else {
+      Alert.alert('Ошибка', `Невозможно обработать предоставленный URL ${imageURL}`, );
     }
-  };
-
-  const onCapture = (event: any) => {
-    setCapturedImage(event.nativeEvent.imageUri);
-    Alert.alert('Ошибка', event.nativeEvent.imageUri);
-    if (capturedImage != null) {
-      recognizeText(event.nativeEvent.imageUri); 
-      setIsCameraOpen(false);
-    }
-  };
-
+  }
 
   const handleButtonClick = () => {
     setDisplayText(`Working in progress...`);
   };
 
-  const handleButtonScanClick = () => {
-    setIsCameraOpen(true);
-  };
+    // Функция для обработки распознанного текста
+    const processRecognizedText = (text: string) => {
+      const regex = /(XT|VF|UU|X7|KN|WF)\w{15}/g; // Регулярное выражение для поиска VIN-кода
+      const trimmedText = text.trim().toUpperCase().replace(/[\n\r]/g, ''); // Приводим текст к верхнему регистру, удаляем лишние пробелы и удаляем переносы строк
+      
+      console.log(trimmedText);
+    
+      // Находим все вхождения VIN-кодов в тексте
+      const vinMatches = trimmedText.match(regex);
+    
+      if (vinMatches && vinMatches.length > 0) {
+        const firstVin = vinMatches[0]; // Берем первое найденное вхождение
+        setInputText(firstVin); // Вставляем распознанный VIN-код в инпут
+        // Дополнительная логика обработки распознанного VIN-кода здесь
+      } else {
+        setDisplayText('Не смогли распознать или неверный формат VIN-кода!');
+      }
+    };
 
-  // const handleScanSuccess = () => {
-  //   setIsCameraOpen(false);
-  // };
+    // Функция для открытия камеры и захвата изображения
+    const handleButtonScanClick = async () => {
+      setDisplayText('');
+      const checkCameraPermission = await check(PERMISSIONS.ANDROID.CAMERA);
+
+      try {    
+        if (checkCameraPermission === RESULTS.GRANTED) {
+          launchCameraAction();
+        } else {
+          const requestCameraPermission = await request(PERMISSIONS.ANDROID.CAMERA);
+    
+          if (requestCameraPermission === RESULTS.GRANTED) {
+            launchCameraAction();
+          } else {
+            Alert.alert('Ошибка', `Не удалось получить доступ к 'камере'`);
+          }
+        }
+      } catch (error) {
+        console.error('Permission check/request error:', error);
+        Alert.alert('Ошибка', `Произошла ошибка при проверке или запросе разрешений`);
+      }
+    };
+
+    const launchCameraAction = () => {
+      const options = {
+        mediaType: 'photo',
+      } as CameraOptions;
+  
+      launchCamera(options, (response: ImagePickerResponse) => {
+        if (response.didCancel) {
+          console.log('User cancelled camera picker');
+        } else if (response.errorCode) {
+          console.log('ImagePicker Error:', response.errorCode);
+        } else {
+          console.log('ImagePicker Response:', response);
+  
+          if (response.assets && response.assets.length > 0) {
+            const imageUri = response.assets[0].uri || '';
+            setCapturedImage(imageUri);
+            recognizeTextFromImage(imageUri);
+          } else {
+            console.log('No image selected');
+          }
+        }
+      });
+    };
 
   const handleScanSuccess = (nativeEvent: GestureResponderEvent) => {
     setIsCameraOpen(false);
@@ -87,7 +151,7 @@ const App = () => {
   const handleCloseCamera = () => {
     setIsCameraOpen(false);
   };
-
+  
   return (
 
     <SafeAreaView style={[styles.container, backgroundStyle]}>
@@ -95,20 +159,6 @@ const App = () => {
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      {isCameraOpen ? (
-        <View style={styles.cameraContainer}>
-          <CameraScreen
-            hideControls // Скрытие всех стандартных контролов
-            onCapture={onCapture} // Обработчик захвата изображения
-            style={styles.camera}
-            // Пользовательские настройки для кнопок и изображений
-            captureButtonImage={require('./assets/capture.png')} // Изображение для кнопки захвата изображения
-          />
-          <TouchableOpacity style={styles.closeButton} onPress={handleCloseCamera}>
-            <Text style={styles.closeButtonText}>Закрыть камеру</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={[styles.scrollView, backgroundStyle]}>
@@ -123,13 +173,14 @@ const App = () => {
             onChangeText={setInputText}
             placeholder="Введите VIN код"
             placeholderTextColor={textColor}
+            maxLength={32} // VIN-код обычно имеет длину 17 символов
           />
           <Text style={[styles.smallText, { color: textColor }]}>или</Text>
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: isDarkMode ? 'black' : 'lightgrey' }]}
+            style={[styles.button, { backgroundColor: isDarkMode ? '#2E2E2E' : 'lightgrey' }]}
             onPress={handleButtonScanClick}>
             <View style={styles.buttonContent}>
-              <CameraIcon size='24' isDarkMode />
+              <CameraIcon size='24' />
               <Text style={[styles.buttonText, { paddingLeft: 8, color: isDarkMode ? 'white' : 'black' }]}>Сканировать VIN код</Text>
             </View>
           </TouchableOpacity>
@@ -153,7 +204,6 @@ const App = () => {
           <Text style={[styles.displayText, { color: textColor }]}>{displayText}</Text>
         </View>
       </ScrollView>
-      )}
     </SafeAreaView>
   );
 };
