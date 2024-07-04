@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import CameraIcon from './assets/scan';
 import {
+  NativeModules,
   GestureResponderEvent,
   SafeAreaView,
   ScrollView,
@@ -12,10 +13,12 @@ import {
   useColorScheme,
   View,
   Linking,
-  Alert
+  Alert,
+  Dimensions
 } from 'react-native';
-import { CameraScreen, CameraType } from 'react-native-camera-kit';
+import { CameraScreen } from 'react-native-camera-kit';
 
+const { TextRecognitionModule } = NativeModules;
 
 const openURL = (url: string) => {
   Linking.canOpenURL(url)
@@ -29,11 +32,32 @@ const openURL = (url: string) => {
     .catch((err) => Alert.alert('Ошибка', 'Произошла ошибка при открытии URL'));
 };
 
-
 const App = () => {
   const [inputText, setInputText] = useState('');
   const [displayText, setDisplayText] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [recognizedText, setRecognizedText] = useState('');
+
+  const recognizeText = async (imageUri: string) => {
+    try {
+      const result = await TextRecognitionModule.recognizeImage(imageUri);
+      console.log('Text recognition result:', result);
+      setRecognizedText(result.blocks.map((block: { text: any; }) => block.text).join('\n'));
+    } catch (error) {
+      console.error('Error recognizing text:', error);
+      setRecognizedText('Ошибка распознавания текста');
+    }
+  };
+
+  const onCapture = (event: any) => {
+    setCapturedImage(event.nativeEvent.imageUri);
+    Alert.alert('Ошибка', event.nativeEvent.imageUri);
+    if (capturedImage != null) {
+      recognizeText(event.nativeEvent.imageUri); 
+      setIsCameraOpen(false);
+    }
+  };
 
 
   const handleButtonClick = () => {
@@ -60,6 +84,10 @@ const App = () => {
 
   const textColor = isDarkMode ? 'white' : 'black';
 
+  const handleCloseCamera = () => {
+    setIsCameraOpen(false);
+  };
+
   return (
 
     <SafeAreaView style={[styles.container, backgroundStyle]}>
@@ -67,6 +95,20 @@ const App = () => {
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
+      {isCameraOpen ? (
+        <View style={styles.cameraContainer}>
+          <CameraScreen
+            hideControls // Скрытие всех стандартных контролов
+            onCapture={onCapture} // Обработчик захвата изображения
+            style={styles.camera}
+            // Пользовательские настройки для кнопок и изображений
+            captureButtonImage={require('./assets/capture.png')} // Изображение для кнопки захвата изображения
+          />
+          <TouchableOpacity style={styles.closeButton} onPress={handleCloseCamera}>
+            <Text style={styles.closeButtonText}>Закрыть камеру</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={[styles.scrollView, backgroundStyle]}>
@@ -111,6 +153,7 @@ const App = () => {
           <Text style={[styles.displayText, { color: textColor }]}>{displayText}</Text>
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -121,6 +164,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 24,
     paddingBottom: 24,
+  },
+  cameraContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  camera: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
   },
   scrollView: {
     flex: 1,
@@ -183,6 +235,20 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 16,
     alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
