@@ -22,6 +22,7 @@ import {launchCamera} from 'react-native-image-picker';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import ReportList from './ReportList';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LogoBackground from './assets/logo'; // Импортируйте компонент логотипа
 
 const openURL = (url: string) => {
   Linking.canOpenURL(url)
@@ -115,7 +116,7 @@ const App = () => {
     }
 
     try {
-      const pdfUrl = `https://pdfobject.com/pdf/sample.pdf`; // Замените на реальный URL вашего сервиса
+      const pdfUrl = `https://pdfobject.com/pdf/sample.pdf`; // Тут будет эндпоинт
       const localFilePath = `${RNFS.DocumentDirectoryPath}/${inputText}.pdf`;
 
       const downloadResponse = await RNFS.downloadFile({
@@ -270,6 +271,9 @@ const App = () => {
           </View>
           {displayText.length > 0 ? (<Text style={[styles.displayText, { color: textColor }]}>{displayText}</Text>) : <></>}
           <ReportList pdfFiles={pdfFiles} onDelete={handlePDFDelete}/>
+          <View style={styles.logoContainer}>
+            <LogoBackground width={Dimensions.get('window').width * 0.66} height={Dimensions.get('window').height * 0.66} />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -367,6 +371,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    opacity: 0.05, // Прозрачность логотипа
+    zIndex: -1, // Чтобы логотип был на заднем плане
   },
 });
 

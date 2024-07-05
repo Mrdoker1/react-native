@@ -71,7 +71,7 @@ const Report: React.FC<ReportProps> = ({ filePath, onDelete }) => {
           <Text style={styles.deleteButtonText}>Удалить</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.separator} />
+      <View style={[styles.separator, { borderBottomColor: isDarkMode ? 'white' : 'black' }]} />
     </View>
   );
 };
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: 'grey',
+    opacity: 0.2,
   },
 });
 
