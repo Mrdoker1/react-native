@@ -8,9 +8,12 @@ interface ReportListProps {
 }
 
 const ReportList: React.FC<ReportListProps> = ({ pdfFiles, onDelete }) => {
+  // Обратим порядок элементов в массиве pdfFiles
+  const reversedPdfFiles = [...pdfFiles].reverse();
+
   return (
     <View style={styles.container}>
-      {pdfFiles.map((filePath) => (
+      {reversedPdfFiles.map((filePath) => (
         <Report key={filePath} filePath={filePath} onDelete={onDelete} />
       ))}
     </View>
