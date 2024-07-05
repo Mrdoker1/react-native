@@ -20,6 +20,8 @@ import RNFS from 'react-native-fs';
 import { CameraOptions, ImagePickerResponse } from 'react-native-image-picker';
 import {launchCamera} from 'react-native-image-picker';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import ReportList from './ReportList';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const openURL = (url: string) => {
   Linking.canOpenURL(url)
@@ -39,6 +41,46 @@ const App = () => {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [capturedImage, setCapturedImage] = useState('');
   const [recognizedText, setRecognizedText] = useState('');
+  const [pdfFiles, setPdfFiles] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadPdfFiles();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDisplayText('');
+    }, 5000); // Через 5000 миллисекунд (5 секунд) текст обнулится
+
+    return () => clearTimeout(timer); // Очистка таймера при размонтировании компонента или изменении состояния
+  }, [displayText]);
+
+  const STORAGE_KEY = 'pdfFiles';
+
+  const loadPdfFiles = async () => {
+    try {
+      const storedPdfFiles = await AsyncStorage.getItem(STORAGE_KEY);
+      if (storedPdfFiles) {
+        setPdfFiles(JSON.parse(storedPdfFiles));
+      }
+    } catch (error) {
+      console.error('Error loading PDF files from storage:', error);
+    }
+  };
+
+  const savePdfFiles = async (files: string[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(files));
+    } catch (error) {
+      console.error('Error saving PDF files to storage:', error);
+    }
+  };
+
+  const handlePDFDelete = (filePath: string) => {
+    const updatedPdfFiles = pdfFiles.filter(file => file !== filePath);
+    setPdfFiles(updatedPdfFiles);
+    savePdfFiles(updatedPdfFiles); // Сохраняем обновленный список PDF-файлов
+  };
 
   // Функция распознавания текста из URL-адреса изображения
   async function recognizeTextFromImage(imageURL:string) {
@@ -47,16 +89,6 @@ const App = () => {
         const result = await TextRecognition.recognize(imageURL);
         console.log('Recognized text:', result.text);
         processRecognizedText(result.text); // Обработка распознанного текста
-  
-        for (let block of result.blocks) {
-          // console.log('Block text:', block.text);
-          // console.log('Block frame:', block.frame);
-  
-          for (let line of block.lines) {
-            // console.log('Line text:', line.text);
-            // console.log('Line frame:', line.frame);
-          }
-        }
         setRecognizedText(result.text);
       } catch (error) {
         console.error('Text recognition error:', error);
@@ -66,8 +98,43 @@ const App = () => {
     }
   }
 
-  const handleButtonClick = () => {
-    setDisplayText(`Working in progress...`);
+  const getReport = async () => {
+    if (!inputText) {
+      setDisplayText('Введите VIN-код перед запросом.');
+      return;
+    }
+
+    if (inputText.length !== 17) {
+      setDisplayText('Введите корректный VIN-код перед запросом.');
+      return;
+    }
+
+    if (pdfFiles.some(filePath => filePath.includes(inputText))) {
+      setDisplayText('Файл с этим VIN-кодом уже был загружен.');
+      return;
+    }
+
+    try {
+      const pdfUrl = `https://pdfobject.com/pdf/sample.pdf`; // Замените на реальный URL вашего сервиса
+      const localFilePath = `${RNFS.DocumentDirectoryPath}/${inputText}.pdf`;
+
+      const downloadResponse = await RNFS.downloadFile({
+        fromUrl: pdfUrl,
+        toFile: localFilePath,
+      }).promise;
+
+      if (downloadResponse.statusCode === 200) {
+        const updatedPdfFiles = [...pdfFiles, localFilePath];
+        setPdfFiles(updatedPdfFiles);
+        await savePdfFiles(updatedPdfFiles); // Сохраняем обновленный список PDF-файлов
+        setDisplayText('PDF файл успешно загружен!');
+      } else {
+        setDisplayText('Ошибка при загрузке PDF файла.');
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      setDisplayText('Произошла ошибка при загрузке PDF файла.');
+    }
   };
 
     // Функция для обработки распознанного текста
@@ -168,11 +235,11 @@ const App = () => {
             <Text style={[styles.smallText, { color: textColor }]}>Пожалуйста, предоставьте мне VIN-номер автомобиля после нажатия на кнопку "Отчет", и я постараюсь найти соответствующую информацию для вас.</Text>
           </View>
           <TextInput
-            style={[styles.input, { borderColor: textColor }]}
+            style={[styles.input, { color: textColor, borderColor: textColor }]}
             value={inputText}
             onChangeText={setInputText}
             placeholder="Введите VIN код"
-            placeholderTextColor={textColor}
+            placeholderTextColor={isDarkMode ? 'lightgrey' : 'grey'}
             maxLength={32} // VIN-код обычно имеет длину 17 символов
           />
           <Text style={[styles.smallText, { color: textColor }]}>или</Text>
@@ -187,7 +254,7 @@ const App = () => {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: isDarkMode ? 'white' : 'black' }]}
-              onPress={handleButtonClick}>
+              onPress={getReport}>
               <Text style={[styles.buttonText, { color: isDarkMode ? 'black' : 'white' }]}>Отчет</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -201,7 +268,8 @@ const App = () => {
               <Text style={[styles.buttonText, { color: isDarkMode ? 'black' : 'white' }]}>Поддержка</Text>
             </TouchableOpacity>
           </View>
-          <Text style={[styles.displayText, { color: textColor }]}>{displayText}</Text>
+          {displayText.length > 0 ? (<Text style={[styles.displayText, { color: textColor }]}>{displayText}</Text>) : <></>}
+          <ReportList pdfFiles={pdfFiles} onDelete={handlePDFDelete}/>
         </View>
       </ScrollView>
     </SafeAreaView>
