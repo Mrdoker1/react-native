@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import Report from './Report';
+import { View } from 'react-native';
+import Report from './Report/Report';
+import styles from './ReportList.styles';
 
 interface ReportListProps {
   pdfFiles: string[];
@@ -8,7 +9,7 @@ interface ReportListProps {
 }
 
 const ReportList: React.FC<ReportListProps> = ({ pdfFiles, onDelete }) => {
-  // Обратим порядок элементов в массиве pdfFiles
+  // Новые отчеты будут отображены первыми
   const reversedPdfFiles = [...pdfFiles].reverse();
 
   return (
@@ -19,13 +20,5 @@ const ReportList: React.FC<ReportListProps> = ({ pdfFiles, onDelete }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    width: '100%',
-    marginTop: 12,
-  },
-});
 
 export default ReportList;
