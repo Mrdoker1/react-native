@@ -7,15 +7,15 @@ interface SupportProps {
   onHide: () => void;
 }
 
+export const handleEmailPress = () => {
+  Linking.openURL('mailto:rgvinbot@gmail.com');
+};
+
+export const handleAlternativeLinkPress = () => {
+  Linking.openURL('https://plati.market/itm/history-of-renault-dacia-cars-from-europe-by-vin-code/4144039');
+};
+
 const Support: React.FC<SupportProps> = ({ visible, onHide }) => {
-  const handleEmailPress = () => {
-    Linking.openURL('mailto:rgvinbot@gmail.com');
-  };
-
-  const handleAlternativeLinkPress = () => {
-    Linking.openURL('https://plati.market/itm/history-of-renault-dacia-cars-from-europe-by-vin-code/4144039');
-  };
-
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.container}>

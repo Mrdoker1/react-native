@@ -22,7 +22,7 @@ import {
   checkCameraPermission,
 } from './utils/utils';
 import ReportList from './components/ReportList/ReportList';
-import Support from './components/Support/Support';
+import Support, { handleAlternativeLinkPress } from './components/Support/Support';
 
 import CameraIcon from './assets/scan';
 import LogoBackground from './assets/logo';
