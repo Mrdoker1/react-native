@@ -1,8 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, {useState} from 'react';
 import CameraIcon from './assets/scan';
 import {
   NativeModules,
-  GestureResponderEvent,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -14,22 +13,21 @@ import {
   View,
   Linking,
   Alert,
-  Dimensions
 } from 'react-native';
-import { CameraScreen } from 'react-native-camera-kit';
+import {CameraScreen} from 'react-native-camera-kit';
 
-const { TextRecognitionModule } = NativeModules;
+const {TextRecognitionModule} = NativeModules;
 
 const openURL = (url: string) => {
   Linking.canOpenURL(url)
-    .then((supported) => {
+    .then(supported => {
       if (supported) {
         return Linking.openURL(url);
       } else {
         Alert.alert('Ошибка', 'Невозможно обработать предоставленный URL');
       }
     })
-    .catch((err) => Alert.alert('Ошибка', 'Произошла ошибка при открытии URL'));
+    .catch(() => Alert.alert('Ошибка', 'Произошла ошибка при открытии URL'));
 };
 
 const App = () => {
@@ -37,13 +35,15 @@ const App = () => {
   const [displayText, setDisplayText] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
-  const [recognizedText, setRecognizedText] = useState('');
+  const [_recognizedText, setRecognizedText] = useState('');
 
   const recognizeText = async (imageUri: string) => {
     try {
       const result = await TextRecognitionModule.recognizeImage(imageUri);
       console.log('Text recognition result:', result);
-      setRecognizedText(result.blocks.map((block: { text: any; }) => block.text).join('\n'));
+      setRecognizedText(
+        result.blocks.map((block: {text: any}) => block.text).join('\n'),
+      );
     } catch (error) {
       console.error('Error recognizing text:', error);
       setRecognizedText('Ошибка распознавания текста');
@@ -54,14 +54,13 @@ const App = () => {
     setCapturedImage(event.nativeEvent.imageUri);
     Alert.alert('Ошибка', event.nativeEvent.imageUri);
     if (capturedImage != null) {
-      recognizeText(event.nativeEvent.imageUri); 
+      recognizeText(event.nativeEvent.imageUri);
       setIsCameraOpen(false);
     }
   };
 
-
   const handleButtonClick = () => {
-    setDisplayText(`Working in progress...`);
+    setDisplayText('Working in progress...');
   };
 
   const handleButtonScanClick = () => {
@@ -71,10 +70,6 @@ const App = () => {
   // const handleScanSuccess = () => {
   //   setIsCameraOpen(false);
   // };
-
-  const handleScanSuccess = (nativeEvent: GestureResponderEvent) => {
-    setIsCameraOpen(false);
-  };
 
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -88,73 +83,133 @@ const App = () => {
     setIsCameraOpen(false);
   };
 
-  return (
+  // Стили для динамических цветов
+  const scanButtonStyle = {
+    backgroundColor: isDarkMode ? 'black' : 'lightgrey',
+  };
 
-    <SafeAreaView style={[styles.container, backgroundStyle]}>
+  const scanButtonTextStyle = {
+    paddingLeft: 8,
+    color: isDarkMode ? 'white' : 'black',
+  };
+
+  const mainButtonStyle = {
+    backgroundColor: isDarkMode ? 'white' : 'black',
+  };
+
+  const mainButtonTextStyle = {
+    color: isDarkMode ? 'black' : 'white',
+  };
+
+  const hiddenImageStyle = {
+    width: 0,
+    height: 0,
+    opacity: 0,
+  };
+
+  return (
+    <>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
       {isCameraOpen ? (
         <View style={styles.cameraContainer}>
-          <CameraScreen
-            hideControls // Скрытие всех стандартных контролов
-            onCapture={onCapture} // Обработчик захвата изображения
-            style={styles.camera}
-            // Пользовательские настройки для кнопок и изображений
-            captureButtonImage={require('./assets/capture.png')} // Изображение для кнопки захвата изображения
-          />
-          <TouchableOpacity style={styles.closeButton} onPress={handleCloseCamera}>
+          <View style={styles.camera}>
+            <CameraScreen
+              onBottomButtonPressed={onCapture}
+              onReadCode={() => {}}
+              captureButtonImage={require('./assets/capture.png')}
+              captureButtonImageStyle={hiddenImageStyle}
+              cameraFlipImage={require('./assets/capture.png')}
+              cameraFlipImageStyle={hiddenImageStyle}
+              torchOnImage={require('./assets/capture.png')}
+              torchOffImage={require('./assets/capture.png')}
+              torchImageStyle={hiddenImageStyle}
+              hideControls={true}
+              showCapturedImageCount={false}
+              cameraRatioOverlay={{}}
+              showFrame={false}
+              scanBarcode={false}
+              laserColor="red"
+              frameColor="white"
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleCloseCamera}>
             <Text style={styles.closeButtonText}>Закрыть камеру</Text>
           </TouchableOpacity>
         </View>
       ) : (
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={[styles.scrollView, backgroundStyle]}>
-        <View style={styles.sectionContainer}>
-          <View style={styles.container}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>Добрый день!</Text>
-            <Text style={[styles.smallText, { color: textColor }]}>Пожалуйста, предоставьте мне VIN-номер автомобиля после нажатия на кнопку "Отчет", и я постараюсь найти соответствующую информацию для вас.</Text>
-          </View>
-          <TextInput
-            style={[styles.input, { borderColor: textColor }]}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Введите VIN код"
-            placeholderTextColor={textColor}
-          />
-          <Text style={[styles.smallText, { color: textColor }]}>или</Text>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: isDarkMode ? 'black' : 'lightgrey' }]}
-            onPress={handleButtonScanClick}>
-            <View style={styles.buttonContent}>
-              <CameraIcon size='24' isDarkMode />
-              <Text style={[styles.buttonText, { paddingLeft: 8, color: isDarkMode ? 'white' : 'black' }]}>Сканировать VIN код</Text>
+        <SafeAreaView style={[styles.container, backgroundStyle]}>
+          <ScrollView
+            contentInsetAdjustmentBehavior="automatic"
+            style={[styles.scrollView, backgroundStyle]}>
+            <View style={styles.sectionContainer}>
+              <View style={styles.container}>
+                <Text style={[styles.sectionTitle, {color: textColor}]}>
+                  Добрый день!
+                </Text>
+                <Text style={[styles.smallText, {color: textColor}]}>
+                  Пожалуйста, предоставьте мне VIN-номер автомобиля после
+                  нажатия на кнопку "Отчет", и я постараюсь найти
+                  соответствующую информацию для вас.
+                </Text>
+              </View>
+              <TextInput
+                style={[styles.input, {borderColor: textColor}]}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Введите VIN код"
+                placeholderTextColor={textColor}
+              />
+              <Text style={[styles.smallText, {color: textColor}]}>или</Text>
+              <TouchableOpacity
+                style={[styles.button, scanButtonStyle]}
+                onPress={handleButtonScanClick}>
+                <View style={styles.buttonContent}>
+                  <CameraIcon size="24" isDarkMode />
+                  <Text style={[styles.buttonText, scanButtonTextStyle]}>
+                    Сканировать VIN код
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.button, mainButtonStyle]}
+                  onPress={handleButtonClick}>
+                  <Text style={[styles.buttonText, mainButtonTextStyle]}>
+                    Отчет
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, mainButtonStyle]}
+                  onPress={() =>
+                    openURL(
+                      'https://telegra.ph/Opisanie-i-primery-raboty-RVinBot-11-23',
+                    )
+                  }>
+                  <Text style={[styles.buttonText, mainButtonTextStyle]}>
+                    Описание и примеры работ
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, mainButtonStyle]}
+                  onPress={() => openURL('mailto:fixrapdok@gmail.com')}>
+                  <Text style={[styles.buttonText, mainButtonTextStyle]}>
+                    Поддержка
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.displayText, {color: textColor}]}>
+                {displayText}
+              </Text>
             </View>
-          </TouchableOpacity>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: isDarkMode ? 'white' : 'black' }]}
-              onPress={handleButtonClick}>
-              <Text style={[styles.buttonText, { color: isDarkMode ? 'black' : 'white' }]}>Отчет</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: isDarkMode ? 'white' : 'black' }]}
-              onPress={() => openURL('https://telegra.ph/Opisanie-i-primery-raboty-RVinBot-11-23')}>
-              <Text style={[styles.buttonText, { color: isDarkMode ? 'black' : 'white' }]}>Описание и примеры работ</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: isDarkMode ? 'white' : 'black' }]}
-              onPress={() => openURL('mailto:fixrapdok@gmail.com')}>
-              <Text style={[styles.buttonText, { color: isDarkMode ? 'black' : 'white' }]}>Поддержка</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={[styles.displayText, { color: textColor }]}>{displayText}</Text>
-        </View>
-      </ScrollView>
+          </ScrollView>
+        </SafeAreaView>
       )}
-    </SafeAreaView>
+    </>
   );
 };
 
@@ -167,12 +222,17 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'black',
   },
   camera: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   scrollView: {
     flex: 1,
@@ -197,7 +257,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    padding: 12,  // Добавлен отступ слева
+    padding: 12, // Добавлен отступ слева
     height: 44,
     width: '100%',
     borderWidth: 1,

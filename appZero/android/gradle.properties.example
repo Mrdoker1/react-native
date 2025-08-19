@@ -1,0 +1,13 @@
+# Copy this file to gradle.properties and adjust paths for your system
+
+# For Windows:
+# org.gradle.java.home=C:/Program Files/Java/jdk-17
+
+# For macOS:
+# org.gradle.java.home=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+
+# For Linux:
+# org.gradle.java.home=/usr/lib/jvm/java-17-openjdk
+
+# Or use system JAVA_HOME (recommended):
+# Leave commented to use system JAVA_HOME

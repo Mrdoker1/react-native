@@ -10,15 +10,13 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
-import com.google.mlkit.common.model.DownloadConditions;
-import com.google.mlkit.common.model.RemoteModelManager;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.Text;
-import com.google.mlkit.vision.text.TextRecognizerOptions;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 import java.io.IOException;
 import java.util.List;
